@@ -1,0 +1,61 @@
+[gd_scene load_steps=8 format=3 uid="uid://brxmce1imnqaq"]
+
+[ext_resource type="Script" path="res://main.gd" id="1_lcf20"]
+[ext_resource type="Script" path="res://example.gd" id="1_lm7rv"]
+[ext_resource type="Texture2D" uid="uid://dvschrtnnrm7j" path="res://icon.svg" id="1_tnl1o"]
+[ext_resource type="Script" path="res://health_control.gd" id="2_fax8u"]
+
+[sub_resource type="Image" id="Image_odktc"]
+
+[sub_resource type="Animation" id="Animation_x7nqh"]
+resource_name = "new_animation"
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(),
+"transitions": PackedFloat32Array(),
+"update": 0,
+"values": []
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_4xqry"]
+_data = {
+"new_animation": SubResource("Animation_x7nqh")
+}
+
+[node name="Node_2D" type="CharacterBody2D"]
+script = ExtResource("1_lcf20")
+
+[node name="Data" type="Node" parent="."]
+unique_name_in_owner = true
+
+[node name="HealthController" type="Node" parent="."]
+unique_name_in_owner = true
+script = ExtResource("2_fax8u")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("1_tnl1o")
+
+[node name="Area2D" type="Area2D" parent="."]
+unique_name_in_owner = true
+script = ExtResource("1_lm7rv")
+limited_array = Array[NodePath]([NodePath(""), NodePath("")])
+dict = {
+NodePath(""): 0
+}
+custom_limited_path = NodePath("..:platform_on_leave")
+limited_path = NodePath("../Sprite2D")
+unlimited_path = NodePath("..:motion_mode")
+resource_with_paths = SubResource("Image_odktc")
+int_array = Array[int]([132, 0])
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D"]
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries = {
+"": SubResource("AnimationLibrary_4xqry")
+}
