@@ -16,7 +16,15 @@ func get_control() -> ComponentInspectorControl:
 
 
 func _can_handle(object: Object) -> bool:
-	return object == EditorInterface.get_edited_scene_root() and object.get_script() != null
+	if object != EditorInterface.get_edited_scene_root() or object.get_script() == null:
+		return false
+	
+	var root := EditorInterface.get_edited_scene_root()
+	var bundled := (load(root.scene_file_path) as PackedScene)._bundled
+	if root.get_script() not in (bundled['variants'] as Array):
+		return false  # Script is from an inherited scene, ignore it then
+	
+	return true
 
 
 func _parse_begin(object: Object) -> void:

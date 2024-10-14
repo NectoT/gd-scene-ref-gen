@@ -173,6 +173,10 @@ func _update(_arg: Variant=null) -> void:
 	if root.get_script() == null:
 		return
 	
+	var bundled := (load(root.scene_file_path) as PackedScene)._bundled
+	if root.get_script() not in (bundled['variants'] as Array):
+		return  # Script is from an inherited scene, ignore it then
+	
 	var ref_states := {}
 	for node_name in _get_unique_names(root):
 		ref_states[node_name] = ReferenceState.NONE
