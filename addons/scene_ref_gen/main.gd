@@ -47,12 +47,12 @@ var _components_inspector: ComponentsInspector
 var _expanded_by_default := true
 
 
-func _get_unique_names(root: Node) -> Array[StringName]:
+func _get_unique_names(root: Node, owner_node: Node) -> Array[StringName]:
 	var names: Array[StringName] = []
 	for child in root.get_children():
-		if child.unique_name_in_owner:
+		if child.unique_name_in_owner and child.owner == owner_node:
 			names.append(child.name)
-		names.append_array(_get_unique_names(child))
+		names.append_array(_get_unique_names(child, owner_node))
 	return names
 
 
@@ -178,7 +178,7 @@ func _update(_arg: Variant=null) -> void:
 		return  # Script is from an inherited scene, ignore it then
 	
 	var ref_states := {}
-	for node_name in _get_unique_names(root):
+	for node_name in _get_unique_names(root, root):
 		ref_states[node_name] = ReferenceState.NONE
 	
 	var script := root.get_script() as Script
