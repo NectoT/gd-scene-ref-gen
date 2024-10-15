@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3 uid="uid://untbjq3b3vk8"]
+
+[ext_resource type="Script" path="res://example/camera.gd" id="1_ox88t"]
+[ext_resource type="Script" path="res://example/shaker.gd" id="1_ubfc8"]
+
+[node name="Camera" type="Camera2D"]
+script = ExtResource("1_ox88t")
+
+[node name="Shaker" type="Node" parent="."]
+unique_name_in_owner = true
+script = ExtResource("1_ubfc8")

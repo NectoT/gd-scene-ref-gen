@@ -1,9 +1,10 @@
-[gd_scene load_steps=7 format=3 uid="uid://brxmce1imnqaq"]
+[gd_scene load_steps=8 format=3 uid="uid://brxmce1imnqaq"]
 
-[ext_resource type="Script" path="res://main.gd" id="1_lcf20"]
-[ext_resource type="Script" path="res://oneshot_area.gd" id="1_lm7rv"]
+[ext_resource type="Script" path="res://example/main.gd" id="1_lcf20"]
+[ext_resource type="Script" path="res://example/oneshot_area.gd" id="1_lm7rv"]
 [ext_resource type="Texture2D" uid="uid://dvschrtnnrm7j" path="res://icon.svg" id="1_tnl1o"]
-[ext_resource type="Script" path="res://health_control.gd" id="2_fax8u"]
+[ext_resource type="Script" path="res://example/health_control.gd" id="2_fax8u"]
+[ext_resource type="PackedScene" uid="uid://untbjq3b3vk8" path="res://example/Camera.tscn" id="5_q12rg"]
 
 [sub_resource type="Animation" id="Animation_x7nqh"]
 resource_name = "new_animation"
@@ -38,13 +39,15 @@ script = ExtResource("2_fax8u")
 [node name="Sprite2D" type="Sprite2D" parent="."]
 texture = ExtResource("1_tnl1o")
 
-[node name="Area2D" type="Area2D" parent="."]
+[node name="OneshotArea" type="Area2D" parent="."]
 unique_name_in_owner = true
 script = ExtResource("1_lm7rv")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="OneshotArea"]
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 libraries = {
 "": SubResource("AnimationLibrary_4xqry")
 }
+
+[node name="Camera" parent="." instance=ExtResource("5_q12rg")]
