@@ -13,6 +13,7 @@ class ReferenceInfo:
 	var variable_name: String
 	var component_name: StringName
 	var type: StringName
+	var script_path: StringName = &''
 	
 	static func parse(line: String) -> ReferenceInfo:
 		var regex := RegEx.new()
@@ -30,11 +31,28 @@ class ReferenceInfo:
 		ref_info.component_name = result.get_string('component_name')
 		return ref_info
 	
+	func add_parsed_typedef(typedef_line: String) -> bool:
+		var regex := RegEx.new()
+		regex.compile('const\\s*{0}\\s*=\\s*preload\\([\'"](.*)[\'"]\\)'.format([type]))
+		var result := regex.search(typedef_line)
+		if result == null:
+			return false
+		script_path = result.strings[1]
+		return true
+	
 	func is_valid_for(component: Node) -> bool:
 		const Outer = preload('res://addons/scene_ref_gen/main.gd')
+		
+		var component_script_path: StringName
+		if component.get_script() != null:
+			component_script_path = (component.get_script() as Script).resource_path
+		else:
+			component_script_path = ''
+		
 		return (
 			component.name == component_name and
-			Outer._get_component_type(component) == type
+			Outer._get_component_type(component) == type and
+			component_script_path == script_path
 		)
 
 
@@ -64,11 +82,17 @@ func _find_region_start_line(source_code: String) -> int:
 	return -1
 
 
-func _find_type_definition_line_number(source_code: String, type: StringName) -> int:
+func _find_type_definition_line_number(
+	source_code: String, 
+	type: StringName, 
+	region_start_line: int = -1
+) -> int:
 	var lines := source_code.split('\n')
 	var regex := RegEx.new()
 	regex.compile('const\\s*{0}\\s*=\\s*preload\\([\'"].*[\'"]\\)'.format([type]))
-	for i in range(_find_region_start_line(source_code) + 1, len(lines)):
+	if region_start_line == -1:
+		region_start_line = _find_region_start_line(source_code)
+	for i in range(region_start_line + 1, len(lines)):
 		if regex.search(lines[i]) != null:
 			return i
 	return -1
@@ -116,6 +140,7 @@ func _update_reference(component_name: StringName, state: ReferenceState) -> voi
 			'#endregion'
 		])
 	
+	
 	for i in range(region_start_line + 1, code_edit.get_line_count()):
 		if code_edit.get_line(i).begins_with('#endregion'):
 			if state == ReferenceState.NONE:
@@ -139,11 +164,11 @@ func _update_reference(component_name: StringName, state: ReferenceState) -> voi
 		if ref_info != null and ref_info.component_name == component_name:
 			EditorInterface.edit_script(script, i)
 			
-			var type_def_line := _find_type_definition_line_number(code_edit.text, ref_info.type)
+			var type_def_line := _find_type_definition_line_number(code_edit.text, ref_info.type, region_start_line)
 			
 			if state == ReferenceState.NONE:
 				code_edit.remove_line_at(i)
-				if _find_type_definition_line_number(code_edit.text, ref_info.type) != -1:
+				if type_def_line != -1:
 					code_edit.remove_line_at(type_def_line)
 			else:
 				var component := root.get_node('%' + component_name)
@@ -225,6 +250,12 @@ func _update(_arg: Variant=null) -> void:
 				if ref_info.component_name not in ref_states:
 					_update_reference(ref_info.component_name, ReferenceState.NONE)
 					continue
+				
+				var typedef_line_number := _find_type_definition_line_number(
+					script.source_code, ref_info.type, region_start_line
+				)
+				if typedef_line_number != -1:
+					ref_info.add_parsed_typedef(lines[typedef_line_number])
 				
 				var state: ReferenceState
 				if ref_info.private:
