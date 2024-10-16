@@ -20,6 +20,12 @@ func _can_handle(object: Object) -> bool:
 		return false
 	
 	var root := EditorInterface.get_edited_scene_root()
+	
+	if root.scene_file_path == '':  # Scene which is not saved to disk yet
+		# FIXME: obviously this isn't ideal, but when there is an inherited scene I don't know
+		# how to check for that without it being saved
+		return false
+	
 	var bundled := (load(root.scene_file_path) as PackedScene)._bundled
 	if root.get_script() not in (bundled['variants'] as Array):
 		return false  # Script is from an inherited scene, ignore it then
