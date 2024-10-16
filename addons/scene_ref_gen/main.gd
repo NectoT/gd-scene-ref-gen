@@ -47,13 +47,13 @@ var _components_inspector: ComponentsInspector
 var _expanded_by_default := true
 
 
-func _get_unique_names(root: Node, owner_node: Node) -> Array[StringName]:
-	var names: Array[StringName] = []
+func _get_unique_nodes(root: Node, owner_node: Node) -> Array[Node]:
+	var nodes: Array[Node] = []
 	for child in root.get_children():
 		if child.unique_name_in_owner and child.owner == owner_node:
-			names.append(child.name)
-		names.append_array(_get_unique_names(child, owner_node))
-	return names
+			nodes.append(child)
+		nodes.append_array(_get_unique_nodes(child, owner_node))
+	return nodes
 
 
 func _find_region_start_line(source_code: String) -> int:
@@ -64,7 +64,7 @@ func _find_region_start_line(source_code: String) -> int:
 	return -1
 
 
-func _find_type_definition_line(source_code: String, type: StringName) -> int:
+func _find_type_definition_line_number(source_code: String, type: StringName) -> int:
 	var lines := source_code.split('\n')
 	var regex := RegEx.new()
 	regex.compile('const\\s*{0}\\s*=\\s*preload\\([\'"].*[\'"]\\)'.format([type]))
@@ -139,10 +139,12 @@ func _update_reference(component_name: StringName, state: ReferenceState) -> voi
 		if ref_info != null and ref_info.component_name == component_name:
 			EditorInterface.edit_script(script, i)
 			
-			var type_def_line := _find_type_definition_line(code_edit.text, ref_info.type)
+			var type_def_line := _find_type_definition_line_number(code_edit.text, ref_info.type)
 			
 			if state == ReferenceState.NONE:
 				code_edit.remove_line_at(i)
+				if _find_type_definition_line_number(code_edit.text, ref_info.type) != -1:
+					code_edit.remove_line_at(type_def_line)
 			else:
 				var component := root.get_node('%' + component_name)
 				var type := _get_component_type(component)
@@ -150,21 +152,44 @@ func _update_reference(component_name: StringName, state: ReferenceState) -> voi
 				code_edit.set_line(i, '@onready var {0}{1}: {2} = %{3}'.format(
 					[private_prefix, ref_info.variable_name, type, ref_info.component_name
 				]))
-				if not _is_component_type_global(component)and type_def_line == -1:
-					code_edit.insert_line_at(i, 'const {0} = preload("{1}")'.format([
+				if not _is_component_type_global(component):
+					var type_def := 'const {0} = preload("{1}")'.format([
 						type, (component.get_script() as Script).resource_path
-					]))
-			
-			if (
-				state == ReferenceState.NONE or 
-				ref_info.type != _get_component_type(root.get_node('%' + component_name))
-			):
-				if type_def_line != -1:
+					])
+					if type_def_line != -1:
+						code_edit.set_line(type_def_line, type_def)
+					else:
+						code_edit.insert_line_at(i, type_def)
+				elif type_def_line != -1:
 					code_edit.remove_line_at(type_def_line)
 			
 			return
 	
 	#EditorInterface.save_scene()
+
+
+
+func _replace_reference_node_name(new_name: StringName, old_name: StringName) -> void:
+	var root := EditorInterface.get_edited_scene_root()
+	if root == null or root.get_script() == null:
+		return
+	
+	var script := root.get_script() as Script
+	
+	var script_editor := EditorInterface.get_script_editor()
+	EditorInterface.edit_script(script)
+	var code_edit: CodeEdit = script_editor.get_current_editor().get_base_editor()
+	if '%' + old_name + '\n' not in code_edit.text:
+		return		
+	EditorInterface.edit_script(script, _find_region_start_line(code_edit.text))
+	EditorInterface.mark_scene_as_unsaved()
+	code_edit.text = code_edit.text.replace('%' + old_name + '\n', '%' + new_name + '\n')
+
+
+func _on_unique_node_renamed(node: Node, old_name: StringName) -> void:
+	assert(not node.renamed.is_connected(_on_unique_node_renamed.bind(node, node.name)))
+	_replace_reference_node_name(node.name, old_name)
+	node.renamed.connect(_on_unique_node_renamed.bind(node, node.name), CONNECT_ONE_SHOT)
 
 
 func _update(_arg: Variant=null) -> void:
@@ -177,8 +202,15 @@ func _update(_arg: Variant=null) -> void:
 	if root.get_script() not in (bundled['variants'] as Array):
 		return  # Script is from an inherited scene, ignore it then
 	
+	var unique_nodes = _get_unique_nodes(root, root)
+	var unique_names: Array[StringName]
+	for node in _get_unique_nodes(root, root):
+		if not node.renamed.is_connected(_on_unique_node_renamed.bind(node, node.name)):
+			node.renamed.connect(_on_unique_node_renamed.bind(node, node.name), CONNECT_ONE_SHOT)
+		unique_names.append(node.name)
+	
 	var ref_states := {}
-	for node_name in _get_unique_names(root, root):
+	for node_name in unique_names:
 		ref_states[node_name] = ReferenceState.NONE
 	
 	var script := root.get_script() as Script
